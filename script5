@@ -1,0 +1,41 @@
+5.1
+WITH TaskPriorities AS (
+    SELECT TaskExecutor, Priority
+    FROM Tasks
+    WHERE TaskExecutor = Users.UID
+    ORDER BY Priority DESC LIMIT 3
+
+    UNION
+
+    SELECT TaskExecutor, Priority
+    FROM Tasks
+    WHERE TaskExecutor = Users.UID
+    ORDER BY Priority ASC LIMIT 3
+)
+SELECT Users.Name, Tasks.Heading, Tasks.Priority
+FROM Users
+JOIN Tasks ON Users.UID = Tasks.TaskExecutor
+WHERE Tasks.Priority IN (
+    SELECT Priority FROM TaskPriorities
+)
+ORDER BY Users.Name;
+
+WITH EvaluatedTasks AS (
+    SELECT TaskExecutor,
+           SUM((ABS(Evaluation) + Evaluation)/2) AS plus,
+           SUM((ABS(Evaluation) - Evaluation)/2) AS minus
+    FROM Tasks
+    GROUP BY TaskExecutor
+)
+SELECT TaskExecutor AS id_executor, plus, minus
+FROM EvaluatedTasks;
+
+WITH AverageEvaluation AS (
+    SELECT AVG(Evaluation) AS AvgEvaluation
+    FROM Tasks
+    WHERE Status IN ('Новая', 'Переоткрыта')
+)
+SELECT TaskExecutor, SUM(Evaluation) AS TotalEvaluation
+FROM Tasks
+JOIN AverageEvaluation ON Evaluation > AvgEvaluation
+GROUP BY TaskExecutor;
