@@ -1,0 +1,462 @@
+CREATE TABLE room_elements (
+    element_name VARCHAR(255) UNIQUE
+);
+
+CREATE TABLE units_of_measurement (
+    unit_name VARCHAR(50) UNIQUE
+);
+
+CREATE TABLE work_catalog (
+    work_id SERIAL PRIMARY KEY,
+    work_name VARCHAR(255) NOT NULL,
+    room_element_name VARCHAR(255) NOT NULL,
+    unit_name VARCHAR(50) NOT NULL,
+    FOREIGN KEY (room_element_name) REFERENCES room_elements(element_name),
+    FOREIGN KEY (unit_name) REFERENCES units_of_measurement(unit_name)
+);
+
+INSERT INTO room_elements (element_name) VALUES
+('Потолок'),
+('Стена'),
+('Пол'),
+('Дверной проем');
+
+INSERT INTO units_of_measurement (unit_name) VALUES
+('м2'),
+('шт.'),
+('м');
+
+INSERT INTO units_of_measurement (unit_name) VALUES
+('лист');
+
+INSERT INTO work_catalog (work_name, room_element_name, unit_name) VALUES
+-- Потолок
+('Расшивка потолочных швов (рустов)', 'Потолок', 'м'),
+('Заделка потолочных швов (рустов)', 'Потолок', 'м'),
+('Очистка поверхности потолка от поврежденного окрасочного слоя', 'Потолок', 'м2'),
+('Обработка потолка антисептиком', 'Потолок', 'м2'),
+('Шпаклевка потолка', 'Потолок', 'м2'),
+('Грунтовка потолка', 'Потолок', 'м2'),
+('Окраска потолка', 'Потолок', 'м2'),
+('Демонтаж / монтаж потолочного плинтуса', 'Потолок', 'м'),
+('Демонтаж / монтаж карниза', 'Потолок', 'шт.'),
+('Демонтаж / монтаж светильника', 'Потолок', 'шт.'),
+('Снятие обоев с потолка', 'Потолок', 'м2'),
+('Оклейка потолка обоями', 'Потолок', 'м2'),
+('Демонтаж ГКЛ с потолка', 'Потолок', 'м2'),
+('Монтаж ГКЛ на потолок', 'Потолок', 'м2'),
+('Демонтаж / монтаж плитки ПВХ на потолок', 'Потолок', 'м2'),
+('Демонтаж / монтаж панелей ПВХ на потолок', 'Потолок', 'м2'),
+('Демонтаж / монтаж подвесного потолка типа Армстронг', 'Потолок', 'м2'),
+('Демонтаж / монтаж натяжного потолка', 'Потолок', 'м2'),
+('Штукатурка потолка', 'Потолок', 'м2'),
+
+-- Стены
+('Обработка стен антисептиком', 'Стена', 'м2'),
+('Грунтовка стен', 'Стена', 'м2'),
+('Шпаклевка стен', 'Стена', 'м2'),
+('Окраска стен', 'Стена', 'м2'),
+('Демонтаж ГКЛ на стены', 'Стена', 'м2'),
+('Монтаж ГКЛ на стены', 'Стена', 'м2'),
+('Демонтаж декоративной штукатурки со стен', 'Стена', 'м2'),
+('Монтаж декоративной штукатурки на стены', 'Стена', 'м2'),
+('Снятие обоев со стен', 'Стена', 'м2'),
+('Оклейка стен обоями', 'Стена', 'м2'),
+('Штукатурка стен', 'Стена', 'м2'),
+('Демонтаж / монтаж панелей ПВХ на стены', 'Стена', 'м2'),
+('Демонтаж керамической плитки со стен', 'Стена', 'м2'),
+('Монтаж (облицовка) стен керамической плиткой', 'Стена', 'м2'),
+('Демонтаж / монтаж розеток, выключателей', 'Стена', 'шт.'),
+
+-- Полы
+('Обработка пола антисептиком', 'Пол', 'м2'),
+('Грунтовка пола', 'Пол', 'м2'),
+('Окраска пола', 'Пол', 'м2'),
+('Стяжка пола', 'Пол', 'м2'),
+('Демонтаж / монтаж линолеума на пол', 'Пол', 'м2'),
+('Демонтаж керамической плитки с пола', 'Пол', 'м2'),
+('Монтаж керамической плитки на пол', 'Пол', 'м2'),
+('Демонтаж / монтаж напольного плинтуса', 'Пол', 'м'),
+('Демонтаж ламинированной доски с пола', 'Пол', 'м2'),
+('Монтаж ламинированной доски на пол', 'Пол', 'м2'),
+('Демонтаж деревянного пола', 'Пол', 'м2'),
+('Монтаж деревянного пола', 'Пол', 'м2'),
+('Демонтаж / монтаж ДВП на пол', 'Пол', 'м2'),
+('Демонтаж / монтаж фанеры на пол', 'Пол', 'м2'),
+
+-- Дверные проемы
+('Демонтаж / монтаж дверной коробки', 'Дверной проем', 'шт.'),
+('Демонтаж / монтаж дверного полотна', 'Дверной проем', 'шт.'),
+('Демонтаж / монтаж дверного наличника', 'Дверной проем', 'шт.');
+
+
+CREATE TABLE experts (
+	expert_id SERIAL PRIMARY KEY,
+    expert_name VARCHAR(255) UNIQUE
+);
+
+CREATE TABLE inspections (
+    id SERIAL PRIMARY KEY,
+    expert_id INTEGER NOT NULL,
+    object_id INTEGER NOT NULL,
+    inspection_date DATE NOT NULL,
+    FOREIGN KEY (expert_id) REFERENCES experts(expert_id),
+    FOREIGN KEY (object_id) REFERENCES objects(object_id)
+);
+
+INSERT INTO experts (expert_name) VALUES
+('Григорук И.Б.');
+
+CREATE TABLE objects (
+    object_id SERIAL PRIMARY KEY,
+    region VARCHAR(255) NOT NULL,
+    locality VARCHAR(255) NOT NULL,
+    district VARCHAR(255),
+    street VARCHAR(255) NOT NULL,
+    house VARCHAR(50) NOT NULL,
+    apartment VARCHAR(50)
+);
+
+
+
+CREATE TABLE rooms (
+    room_id SERIAL PRIMARY KEY,
+    inspection_id INTEGER NOT NULL,
+    room_name VARCHAR(255) NOT NULL,
+    area DECIMAL(10, 2) NOT NULL,
+    ceiling_height DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (inspection_id) REFERENCES inspections(id)
+);
+
+CREATE TABLE damages (
+    damage_id SERIAL PRIMARY KEY,
+    inspection_id INTEGER NOT NULL,
+    room_id INTEGER NOT NULL,
+    room_element_name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    condition VARCHAR(255) NOT NULL,
+    FOREIGN KEY (inspection_id) REFERENCES inspections(id),
+    FOREIGN KEY (room_id) REFERENCES rooms(room_id),
+    FOREIGN KEY (room_element_name) REFERENCES room_elements(element_name)
+);
+
+-- Создание таблицы "Необходимые работы"
+CREATE TABLE repairs (
+    repair_id SERIAL PRIMARY KEY,
+    damage_id INTEGER NOT NULL,
+    work_id INTEGER NOT NULL,
+    volume DECIMAL(10, 2) NOT NULL,
+    unit_cost DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (damage_id) REFERENCES damages(damage_id),
+    FOREIGN KEY (work_id) REFERENCES work_catalog(work_id)
+);
+
+
+-- Создание таблицы "Необходимые материалы"
+CREATE TABLE required_materials (
+    material_id SERIAL PRIMARY KEY,
+    damage_id INTEGER NOT NULL,
+    material_name VARCHAR(255) NOT NULL,
+    unit_name VARCHAR(50) NOT NULL,
+    unit_cost DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (damage_id) REFERENCES damages(damage_id),
+    FOREIGN KEY (unit_name) REFERENCES units_of_measurement(unit_name)
+);
+
+
+CREATE OR REPLACE FUNCTION get_inspection_works(p_inspection_id INTEGER)
+RETURNS TABLE (
+    room_name VARCHAR,
+    room_element_name VARCHAR,
+    work_name VARCHAR,
+    volume DECIMAL(10, 2),
+    unit_name VARCHAR,
+    unit_cost DECIMAL(10, 2),
+    total_cost DECIMAL(10, 2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        r.room_name,
+        re.element_name AS room_element_name,
+        wc.work_name,
+        rp.volume,
+        u.unit_name,
+        rp.unit_cost,
+        rp.volume * rp.unit_cost AS total_cost
+    FROM
+        inspections i
+    JOIN
+        rooms r ON i.id = r.inspection_id
+    JOIN
+        damages d ON i.id = d.inspection_id AND r.room_id = d.room_id
+    JOIN
+        repairs rp ON d.damage_id = rp.damage_id
+    JOIN
+        work_catalog wc ON rp.work_id = wc.work_id
+    JOIN
+        room_elements re ON wc.room_element_name = re.element_name
+    JOIN
+        units_of_measurement u ON wc.unit_name = u.unit_name
+    WHERE
+        i.id = p_inspection_id
+        AND i.is_deleted = FALSE
+    ORDER BY
+        r.room_name,
+        re.element_name,
+        wc.work_name;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+-- Вставка данных в таблицу объектов
+INSERT INTO objects (region, locality, district, street, house, apartment) VALUES
+('Область 1', 'Город 1', 'Район 1', 'Улица 1', 'Дом 1', 'Квартира 1');
+
+-- Вставка данных в таблицу экспертиз
+INSERT INTO inspections (expert_id, object_id, inspection_date) VALUES
+(1, 1, '2024-05-01');  -- Предполагается, что expert_id = 1 существует
+
+-- Вставка данных в таблицу помещений
+INSERT INTO rooms (inspection_id, room_name, area, ceiling_height) VALUES
+(1, 'Гостиная', 20.0, 2.5),
+(1, 'Кухня', 10.0, 2.5);
+
+-- Вставка данных в таблицу повреждений
+INSERT INTO damages (inspection_id, room_id, room_element_name, description, condition) VALUES
+(1, 1, 'Потолок', 'Трещины', 'Требует ремонта'),
+(1, 2, 'Стена', 'Пятна плесени', 'Требует обработки');
+
+-- Вставка данных в таблицу необходимых работ
+INSERT INTO repairs (damage_id, work_id, volume, unit_cost) VALUES
+(1, 1, 5.0, 100.0),  -- Работа по расшивке потолочных швов
+(1, 2, 5.0, 150.0),  -- Работа по заделке потолочных швов
+(2, 19, 10.0, 200.0);  -- Обработка стен антисептиком
+
+SELECT * FROM get_inspection_works(1);
+
+CREATE OR REPLACE FUNCTION get_inspection_materials(p_inspection_id INTEGER)
+RETURNS TABLE (
+    room_name VARCHAR,
+    room_element_name VARCHAR,
+    material_name VARCHAR,
+    unit_name VARCHAR,
+    quantity DECIMAL(10, 2),
+    unit_cost DECIMAL(10, 2),
+    total_cost DECIMAL(10, 2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        r.room_name,
+        re.element_name AS room_element_name,
+        rm.material_name,
+        u.unit_name,
+        rm.quantity,
+        rm.unit_cost,
+        rm.quantity * rm.unit_cost AS total_cost
+    FROM
+        inspections i
+    JOIN
+        rooms r ON i.id = r.inspection_id
+    JOIN
+        damages d ON i.id = d.inspection_id AND r.room_id = d.room_id
+    JOIN
+        required_materials rm ON d.damage_id = rm.damage_id
+    JOIN
+        room_elements re ON d.room_element_name = re.element_name
+    JOIN
+        units_of_measurement u ON rm.unit_name = u.unit_name
+    WHERE
+        i.id = p_inspection_id
+        AND i.is_deleted = FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+
+INSERT INTO required_materials (damage_id, material_name, unit_name, unit_cost, quantity)
+VALUES
+(1, 'Краска 5л.', 'шт.', 500, 5),
+(2, 'ЛДВП', 'лист', 300, 10);
+
+
+-- Вызов функции для экспертизы с id = 1
+SELECT * FROM get_inspection_materials(1);
+
+CREATE OR REPLACE FUNCTION get_inspection_damages(p_inspection_id INTEGER)
+RETURNS TABLE (
+    room_name VARCHAR,
+    room_element_name VARCHAR,
+    description VARCHAR,
+    condition VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        r.room_name,
+        de.element_name AS room_element_name,
+        d.description,
+        d.condition
+    FROM
+        inspections i
+    JOIN
+        rooms r ON i.id = r.inspection_id
+    JOIN
+        damages d ON i.id = d.inspection_id AND r.room_id = d.room_id
+    JOIN
+        room_elements de ON d.room_element_name = de.element_name
+    WHERE
+        i.id = p_inspection_id
+        AND i.is_deleted = FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Вызов функции для экспертизы с id = 1
+SELECT * FROM get_inspection_damages(1);
+
+
+CREATE OR REPLACE FUNCTION get_inspection_work_costs(p_inspection_id INTEGER)
+RETURNS TABLE (
+    work_name VARCHAR,
+    work_volume DECIMAL(10, 2),
+    work_unit_cost DECIMAL(10, 2),
+    total_work_cost DECIMAL(10, 2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH total_works AS (
+        SELECT
+            wc.work_name,
+            w.volume AS work_volume,
+            w.unit_cost AS work_unit_cost,
+            SUM(w.volume * w.unit_cost) AS total_cost
+        FROM
+            inspections i
+        JOIN
+            rooms r ON i.id = r.inspection_id
+        JOIN
+            damages d ON i.id = d.inspection_id AND r.room_id = d.room_id
+        JOIN
+            repairs w ON d.damage_id = w.damage_id
+        JOIN
+            work_catalog wc ON w.work_id = wc.work_id
+        WHERE
+            i.id = p_inspection_id
+            AND i.is_deleted = FALSE
+        GROUP BY
+            wc.work_name, w.volume, w.unit_cost
+    )
+    SELECT
+        tw.work_name,
+        tw.work_volume,
+        tw.work_unit_cost,
+        COALESCE(tw.total_cost, 0) AS total_work_cost
+    FROM
+        total_works tw;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Вызов функции для экспертизы с id = 1
+SELECT * FROM get_inspection_work_costs(1);
+
+CREATE OR REPLACE FUNCTION get_inspection_material_costs(p_inspection_id INTEGER)
+RETURNS TABLE (
+    material_name VARCHAR,
+    unit_name VARCHAR,
+    unit_cost DECIMAL(10, 2),
+    total_material_cost DECIMAL(10, 2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH total_materials AS (
+        SELECT
+            m.material_name,
+            m.unit_name,
+            m.unit_cost,
+            SUM(m.quantity * m.unit_cost) AS total_cost
+        FROM
+            inspections i
+        JOIN
+            rooms r ON i.id = r.inspection_id
+        JOIN
+            damages d ON i.id = d.inspection_id AND r.room_id = d.room_id
+        JOIN
+            required_materials m ON d.damage_id = m.damage_id
+        WHERE
+            i.id = p_inspection_id
+            AND i.is_deleted = FALSE
+        GROUP BY
+            m.material_name, m.unit_name, m.unit_cost
+    )
+    SELECT
+        tm.material_name,
+        tm.unit_name,
+        tm.unit_cost,
+        COALESCE(tm.total_cost, 0) AS total_material_cost
+    FROM
+        total_materials tm;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Вызов функции для экспертизы с id = 1
+SELECT * FROM get_inspection_material_costs(1);
+
+CREATE OR REPLACE FUNCTION get_possible_works_for_element(room_element_name VARCHAR)
+RETURNS TABLE (
+    work_id INTEGER,
+    work_name VARCHAR,
+    unit_name VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        wc.work_id,
+        wc.work_name,
+        wc.unit_name
+    FROM
+        work_catalog wc
+    WHERE
+        wc.room_element_name = get_possible_works_for_element.room_element_name;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_possible_works_for_element('Потолок');
+
+
+CREATE OR REPLACE FUNCTION search_inspections_by_date(date_input DATE)
+RETURNS TABLE (
+    inspection_id INT,
+    expert_name VARCHAR,
+    object_address TEXT,
+    inspection_date DATE
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        i.id,
+        e.expert_name,
+        CONCAT(o.region, ', ', o.locality, ', ', o.district, ', ', o.street, ', ', o.house, ', ', o.apartment) AS object_address,
+        i.inspection_date
+    FROM 
+        inspections i
+    JOIN 
+        experts e ON i.expert_id = e.expert_id
+    JOIN 
+        objects o ON i.object_id = o.object_id
+    WHERE 
+        i.inspection_date = date_input
+        AND i.is_deleted = FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+
+SELECT * FROM search_inspections_by_date('2024-05-30');
+
+ALTER TABLE inspections ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+
+
