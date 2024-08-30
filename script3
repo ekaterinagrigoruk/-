@@ -1,0 +1,111 @@
+3.1
+CREATE TABLE A (
+    id INT PRIMARY KEY,
+    data VARCHAR(100)
+);
+
+CREATE TABLE B (
+	id INT PRIMARY KEY,
+    data VARCHAR(100),
+    aid INT,
+    FOREIGN KEY (aid) REFERENCES A(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+INSERT INTO A (id, data) VALUES (1, 'Саша');
+INSERT INTO A (id, data) VALUES (2, 'Маша');
+INSERT INTO B (id, data, aid) VALUES (1, 'стул', 1);
+INSERT INTO B (id, data, aid) VALUES (2, 'кровать', 2);
+
+UPDATE A SET data = 'табуретка' WHERE id = 1;
+DELETE FROM A WHERE id = 2;
+SELECT * FROM B;
+
+3.2
+один к одному
+CREATE TABLE capitals (
+	capital_id INT PRIMARY KEY,
+	capital_name VARCHAR(50)
+);
+
+CREATE TABLE countries (
+	country_id INT PRIMARY KEY,
+	country_name VARCHAR(50),
+	capital_id INT,
+	FOREIGN KEY (capital_id) REFERENCES capitals(capital_id)
+);
+
+INSERT INTO capitals (capital_id, capital_name)
+VALUES (1, 'Москва'), (2, 'Париж'),(3, 'Лондон'), (4, 'Токио');
+
+
+INSERT INTO countries (country_id, country_name, capital_id)
+VALUES (1, 'Россия', 1), (2, 'Франция', 2), (3, 'Великобритания', 3), (4, 'Япония', 4);
+
+
+SELECT countries.country_name, capitals.capital_name
+FROM countries
+JOIN capitals ON countries.capital_id = capitals.capital_id;
+
+
+один ко многим
+Users и Tasks в 1-2 задании
+
+многие ко многим
+CREATE TABLE students (
+	student_id INT PRIMARY KEY,
+	student_name VARCHAR(50)
+);
+
+CREATE TABLE subjects (
+	subject_id INT PRIMARY KEY,
+	subject_name VARCHAR(50)
+);
+
+CREATE TABLE student_subjects (
+	student_id INT,
+	subject_id INT,
+	PRIMARY KEY (student_id, subject_id),
+	FOREIGN KEY (student_id) REFERENCES students(student_id),
+	FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
+);
+
+INSERT INTO students (student_id, student_name)
+VALUES (1, 'Некряч Саша'),
+	(2, 'Петрова Маша'),
+ 	(3, 'Родякин Влад'),
+	(4, 'Корень Егор'),
+ 	(5, 'Григорук Катя');
+
+INSERT INTO subjects (subject_id, subject_name)
+VALUES (1, 'Матан'),
+	(2, 'Функан'),
+	(3, 'БД'),
+	(4, 'ФКСВ'),
+	(5, 'ООП');
+
+INSERT INTO student_subjects (student_id, subject_id)
+VALUES (1, 1), (1, 2), (1, 3), (2, 2), (2, 4), (3, 1), (3, 3),
+(3, 5), (4, 2), (4, 4), (5, 1), (5, 4), (5, 5);
+      
+SELECT student_name, subject_name
+FROM students, student_subjects, subjects
+WHERE students.student_id = student_subjects.student_id
+AND student_subjects.subject_id = subjects.subject_id;
+
+3.3
+CREATE TABLE persons (
+	id INT PRIMARY KEY,
+	name VARCHAR(50),
+	email VARCHAR(50),
+	phone VARCHAR(20)
+);
+
+   
+INSERT INTO persons (id, name, email, data)
+VALUES (1, 'John', 'john@example.com', '555-1234'),
+	(2, 'Jane', 'jane@example.com', '555-5678'),
+	(3, 'Mike', 'mike@example.com', '{phones: [555-4321, 5656-2342], }');
+
+INSERT INTO persons (name, email, phone) VALUES (4,'Mike', 'mike@example.com', '555-4321');
+
+DELETE FROM persons WHERE email='john@example.com';
