@@ -1,0 +1,103 @@
+4.1
+SELECT *
+FROM Tasks
+FULL OUTER JOIN Users
+ON UID = TaskCreator
+WHERE UID IS NULL 
+OR TaskCreator IS NULL;
+
+SELECT *
+FROM Tasks
+FULL OUTER JOIN Users
+ON UID = TaskCreator;
+
+SELECT *
+FROM Tasks
+INNER JOIN Users
+ON UID = TaskCreator;
+
+SELECT *
+FROM Tasks
+LEFT JOIN Users
+ON UID = TaskCreator;
+
+SELECT *
+FROM Tasks
+LEFT JOIN Users
+ON UID = TaskCreator
+WHERE UID IS NULL;
+
+SELECT *
+FROM Tasks
+RIGHT JOIN Users
+ON UID = TaskCreator;
+
+SELECT *
+FROM Tasks
+LEFT JOIN Users
+ON UID = TaskCreator
+WHERE TaskCreator IS NULL;
+
+--???
+SELECT *
+FROM Tasks
+FULL OUTER JOIN Users
+ON UID = TaskCreator
+INNER JOIN projects p 
+ON belongingtotheproject = PID
+WHERE UID IS NULL 
+OR TaskCreator IS NULL;
+
+SELECT *
+FROM (
+    SELECT U.*, t.*
+    FROM Users U
+    INNER JOIN Tasks t ON U.UID = t.TaskCreator
+) AS UserCreator
+FULL OUTER JOIN (
+    SELECT U.*, P.*
+    FROM Users U
+    INNER JOIN Projects P ON U.UID = P.BelongingToTheUser
+) AS UserProject
+ON UserCreator.UID = UserProject.UID;
+
+SELECT *
+FROM Tasks t
+INNER JOIN Users U
+	ON t.TaskCreator = U.UID
+INNER JOIN Projects P
+	ON t.BelongingToTheProject = P.PID;
+
+4.2
+--без соотнесенного и вложенного запроса через объединение
+SELECT идентификатор задачи, название задачи FROM Задачи As
+out WHERE Приоритет = (SELECT MAX(Приоритет) FROM Задачи As
+int WHERE int.Автор = out.Автор)
+
+SELECT out.Heading, out.Priority, out.TaskCreator
+FROM Tasks AS out, Tasks AS inp
+WHERE inp.TaskCreator = out.TaskCreator
+GROUP BY out.TaskCreator, out.Heading, out.Priority
+HAVING MAX(inp.Priority) = out.Priority;
+
+4.3
+SELECT distinct Login
+FROM Users
+WHERE Users.UID IN (SELECT DISTINCT TaskExecutor FROM Tasks);
+
+SELECT DISTINCT Login
+FROM Users, Tasks
+WHERE UID = TaskExecutor;
+
+SELECT DISTINCT Login
+FROM Users
+INNER JOIN Tasks ON UID = TaskCreator;
+
+4.4
+SELECT StartDate, FinishDate 
+FROM Projects;
+
+4.5
+SELECT p.Title, t.Heading FROM Tasks as t, Projects as p;
+
+SELECT p.Title, t.Heading FROM Tasks as t CROSS JOIN Projects as p;
