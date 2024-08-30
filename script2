@@ -1,0 +1,137 @@
+2.1
+SELECT 
+	Name, 
+	Heading, 
+	Priority
+FROM Users
+JOIN Tasks 
+	ON Users.UID = Tasks.TaskExecutor
+WHERE 
+	Priority IN (
+    	SELECT 
+    		Priority 
+    	FROM Tasks
+    	WHERE 
+    		TaskExecutor = Users.UID
+    	ORDER BY Priority DESC LIMIT 3)
+    OR 
+    Priority IN (
+    	SELECT Priority FROM Tasks
+    	WHERE TaskExecutor = Users.UID
+    	ORDER BY Priority ASC LIMIT 3)
+order by name;
+
+2.2
+SELECT COUNT(*) AS C, EXTRACT(MONTH FROM StartDate) AS M, EXTRACT(YEAR FROM StartDate) AS Y, BelongingToTheUser AS ID
+FROM Projects
+GROUP BY EXTRACT(MONTH FROM StartDate), EXTRACT(YEAR FROM StartDate), BelongingToTheUser;
+
+
+SELECT CONCAT(EXTRACT(YEAR FROM StartDate), EXTRACT(MONTH FROM StartDate)) AS result from projects;
+
+2.3
+SELECT TaskExecutor AS id_executor, 
+       SUM((ABS(Evaluation) + Evaluation)/2) AS "+",
+       SUM((ABS(Evaluation) - Evaluation)/2) AS "-"
+FROM Tasks
+GROUP BY TaskExecutor;
+
+
+SELECT t1.TaskExecutor AS id_executor,
+       COALESCE(t2.negative, 0) AS "-",
+       COALESCE(t3.positive, 0) AS "+"
+FROM (SELECT DISTINCT TaskExecutor FROM Tasks) t1
+LEFT JOIN (SELECT TaskExecutor, SUM(Evaluation) AS negative 
+           FROM Tasks WHERE Evaluation < 0 GROUP BY TaskExecutor) t2 ON t1.TaskExecutor = t2.TaskExecutor
+LEFT JOIN (SELECT TaskExecutor, SUM(Evaluation) AS positive 
+           FROM Tasks WHERE Evaluation > 0 GROUP BY TaskExecutor) t3 ON t1.TaskExecutor = t3.TaskExecutor;
+
+2.4
+SELECT TaskCreator, TaskExecutor
+FROM Tasks 
+WHERE TaskCreator > TaskExecutor
+UNION 
+SELECT TaskExecutor, TaskCreator
+FROM Tasks 
+WHERE TaskExecutor >= TaskCreator
+order by TaskCreator
+
+SELECT TaskCreator, TaskExecutor
+FROM Tasks 
+WHERE TaskCreator > TaskExecutor
+UNION 
+SELECT TaskCreator, TaskExecutor
+FROM Tasks 
+WHERE TaskExecutor >= TaskCreator
+order by TaskCreator
+
+2.5
+SELECT Login, LENGTH(Login) AS length
+FROM Users
+ORDER BY LENGTH(Login) DESC
+LIMIT 1;
+
+2.6
+CREATE TABLE chartable (
+    charvalue CHAR(20),
+    varcharvalue VARCHAR(20)
+);
+
+INSERT INTO chartable (charvalue, varcharvalue) VALUES ('hello world', 'hello world');
+
+SELECT pg_column_size(charvalue) as char_size from chartable;
+SELECT pg_column_size(varcharvalue) as varchar_size from chartable;
+
+2.7
+SELECT
+    TaskExecutor,
+    MAX(Priority) AS MaxPriority,
+    MIN(Priority) AS MinPriority
+FROM Tasks
+GROUP BY TaskExecutor;
+
+2.8
+SELECT TaskExecutor, SUM(Evaluation) AS TotalEvaluation
+FROM Tasks
+WHERE Evaluation > (SELECT AVG(Evaluation) FROM Tasks WHERE Status = 'Новая' OR Status = 'Переоткрыта')
+GROUP BY TaskExecutor;
+
+2.9
+CREATE VIEW UserTasksStatistics AS
+SELECT 
+    u.UID AS UserID,
+    u.Name AS UserName,
+    COUNT(t.BelongingToTheProject) AS TotalTasks,
+    SUM(CASE WHEN t.Status = 'Закрыта' THEN 1 ELSE 0 END) AS TasksCompletedOnTime,
+    SUM(CASE WHEN t.Status = 'Переоткрыта' THEN 1 ELSE 0 END) AS TasksDelayed,
+    SUM(CASE WHEN t.Status = 'Новая' THEN 1 ELSE 0 END) AS TasksOpened,
+    SUM(CASE WHEN t.Status = 'Закрыта' THEN 1 ELSE 0 END) AS TasksClosed,
+    SUM(CASE WHEN t.Status = 'Выполняется' THEN 1 ELSE 0 END) AS TasksInProgress,
+    SUM(t.Evaluation) AS TotalTimeSpent,
+    SUM(CASE WHEN t.Evaluation > 40 THEN t.Evaluation - 40 ELSE 0 END) AS Overtime,
+    SUM(CASE WHEN t.Evaluation < 40 THEN 40 - t.Evaluation ELSE 0 END) AS Undertime
+FROM Users u
+LEFT JOIN Tasks t ON u.UID = t.TaskExecutor
+GROUP BY u.UID, u.Name;
+
+2.10
+Простое объединение
+
+SELECT Projects.PID, Projects.Title, Tasks.Heading
+FROM Projects, Tasks
+WHERE Projects.PID = Tasks.BelongingToTheProject;
+
+Объединение с вложенным подзапросом
+
+SELECT PID, Title
+FROM Projects
+WHERE PID IN
+  (SELECT BelongingToTheProject
+   FROM Tasks);
+
+Объединение с соотнесенным подзапросом
+
+SELECT PID, Title, BelongingToTheUser FROM Projects P
+WHERE BelongingToTheUser IN
+	(SELECT TaskExecutor FROM Tasks T
+		WHERE P.BelongingToTheUser = T.TaskExecutor);
