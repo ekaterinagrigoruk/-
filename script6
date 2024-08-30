@@ -1,0 +1,493 @@
+6.1
+--a
+CREATE TABLE account (
+    account_id INT PRIMARY KEY,
+    account_name VARCHAR(20),
+    account_balance INT
+);
+
+INSERT INTO account (account_id, account_name, account_balance)
+VALUES
+    (1, 'John', 100),
+    (2, 'Alice', 200),
+    (3, 'Bob', 150);
+
+SELECT * FROM account;
+
+-- Транзакция 1
+BEGIN;
+SELECT account_balance
+FROM account
+WHERE account_id = 1
+FOR UPDATE;
+
+-- Транзакция 2
+BEGIN;
+SELECT account_balance
+FROM account
+WHERE account_id = 2
+FOR UPDATE;
+
+6.2
+--1
+CREATE OR REPLACE FUNCTION transaction_demo() 
+RETURNS VARCHAR(100) 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    result VARCHAR(100);
+BEGIN
+    SAVEPOINT sp1;
+
+    BEGIN
+        UPDATE account SET account_balance = account_balance - 100 WHERE account_id = 1;
+        UPDATE account SET account_balance = account_balance + 100 WHERE account_id = 2;
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- Откат всех изменений транзакции в случае ошибки
+            ROLLBACK TO SAVEPOINT sp1;
+            result := 'An error occurred: ' || SQLERRM;
+            RETURN result;
+    END;
+
+    COMMIT;
+    result := 'Transaction completed successfully.';
+    RETURN result;
+END;
+$$;
+
+
+
+SELECT transaction_demo();
+
+
+
+--2
+CREATE OR REPLACE FUNCTION update_balance_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Выводим значения балансов до обновления
+    RAISE NOTICE 'Old balance for account_id = 1: %', OLD.account_balance;
+    RAISE NOTICE 'Old balance for account_id = 2: %', (SELECT account_balance FROM account WHERE account_id = 2);
+
+    -- Обновляем баланс другого счета (account_id = 2)
+    UPDATE account
+    SET account_balance = NEW.account_balance
+    WHERE account_id = 2;
+
+    RAISE NOTICE 'New balance for account_id = 1: %', NEW.account_balance;
+    RAISE NOTICE 'New balance for account_id = 2: %', (SELECT account_balance FROM account WHERE account_id = 2);
+
+    -- Обновляем баланс другого счета (account_id = 1)
+    UPDATE account
+    SET account_balance = NEW.account_balance
+    WHERE account_id = 1;
+
+    RAISE NOTICE 'New balance for account_id = 1: %', (SELECT account_balance FROM account WHERE account_id = 1);
+    RAISE NOTICE 'New balance for account_id = 2: %', NEW.account_balance;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Создание триггера, вызываемого при обновлении баланса счета (account_id = 1)
+CREATE TRIGGER update_balance_trigger
+AFTER UPDATE OF account_balance ON account
+FOR EACH ROW
+WHEN (NEW.account_id = 1)
+EXECUTE PROCEDURE update_balance_trigger();
+
+-- Обновление баланса счета account_id = 1
+UPDATE account SET account_balance = account_balance + 50 WHERE account_id = 1;
+
+
+--3
+CREATE OR REPLACE FUNCTION catalan_number(n INT) RETURNS INT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF n <= 1 THEN
+        RETURN 1;
+    ELSE
+        RETURN catalan_number(n - 1) * (4*n - 2) / (n + 1);
+    END IF;
+END;
+$$;
+
+select catalan_number(10)
+-- 16796
+
+6.3
+CREATE TABLE folders2 (
+    folder_id INTEGER PRIMARY KEY,
+    parent_folder_id INTEGER,
+    folder_name CHAR(100),
+    path VARCHAR(255),
+    FOREIGN KEY(parent_folder_id) REFERENCES folders2(folder_id)
+);
+
+
+-- Хранимая функция для вставки новых папок и номенклатур в произвольный уровень
+CREATE OR REPLACE FUNCTION insert_folder_or_item(
+	p_folder_id INTEGER,
+    p_parent_folder_id INTEGER,
+    p_folder_name CHAR(100)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_path VARCHAR(255);
+BEGIN
+    SELECT COALESCE(path || '/', '') || folder_id
+    INTO v_path
+    FROM folders2
+    WHERE folder_id = p_parent_folder_id;
+    
+    INSERT INTO folders2 (folder_id, parent_folder_id, folder_name, path)
+    VALUES (p_folder_id, p_parent_folder_id, p_folder_name, v_path);
+END;
+$$;
+
+
+-- Хранимая функция для удаления узла
+CREATE OR REPLACE FUNCTION delete_folder_or_item(
+    p_folder_id INTEGER
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM folders2 WHERE folder_id = p_folder_id;
+END;
+$$;
+
+-- Хранимая функция для перемещения номенклатуры и папки
+CREATE OR REPLACE FUNCTION move_folder_or_item(
+    p_item_id INTEGER,
+    p_new_parent_folder_id INTEGER
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_new_path VARCHAR(255);
+BEGIN
+    -- Вычисляем новый путь для перемещаемого узла
+    SELECT COALESCE(path || '/', '') || folder_id
+    INTO v_new_path
+    FROM folders2
+    WHERE folder_id = p_new_parent_folder_id;
+    
+    UPDATE folders2
+    SET parent_folder_id = p_new_parent_folder_id, path = v_new_path
+    WHERE folder_id = p_item_id;
+END;
+$$;
+
+-- Хранимая функция для поиска номенклатуры по наименованию
+CREATE OR REPLACE FUNCTION search_item_by_name(
+    p_item_name CHAR(100)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    rec RECORD;
+BEGIN
+    -- Выбираем номенклатуры по части наименования с указанием пути до корня
+    FOR rec IN (
+        SELECT folder_name, path
+        FROM folders2
+        WHERE folder_name LIKE '%' || p_item_name || '%'
+    ) LOOP
+        RAISE NOTICE '"%","%"', rec.folder_name, rec.path;
+    END LOOP;
+END;
+$$;
+
+
+
+INSERT INTO folders2 (folder_id, parent_folder_id, folder_name, path)
+VALUES
+    (1, NULL, 'Folder A', '1'),
+    (2, NULL, 'Folder B', '2'),
+    (3, 1, 'Subfolder A1', '1/3'),
+    (4, 1, 'Subfolder A2', '1/4'),
+    (5, 2, 'Subfolder B1', '2/5'),
+    (6, 3, 'Subsubfolder A1a', '1/3/6');
+
+
+
+SELECT insert_folder_or_item(7, 3, 'New Folder');
+
+SELECT insert_folder_or_item(8, 3, 'New Item');
+
+-- Удаляем папку Subfolder A2
+SELECT delete_folder_or_item(4);
+
+SELECT move_folder_or_item(6, NULL);
+
+SELECT search_item_by_name('Sub');
+
+select * from folders2
+
+6.4
+
+CREATE TABLE Tasks3 (
+    TaskID SERIAL PRIMARY KEY,
+    BelongingToTheProject INT,
+    TaskExecutor INT,
+    TaskCreator INT NOT NULL,
+    Heading VARCHAR(100) NOT NULL,
+    Priority INT,
+    Description TEXT, 
+    Status VARCHAR(100),
+    Evaluation INT,
+    Costs INT,
+    FOREIGN KEY (BelongingToTheProject) REFERENCES Projects (PID),
+    FOREIGN KEY (TaskExecutor) REFERENCES Users (UID),
+    FOREIGN KEY (TaskCreator) REFERENCES Users (UID),
+    FOREIGN KEY (Status) REFERENCES TaskStatuses (Status)
+);
+
+INSERT INTO Tasks3 (TaskID, BelongingToTheProject, TaskExecutor, TaskCreator, Heading, Priority, Description, Status, Evaluation, Costs)
+VALUES
+(1, 1, 1, 2, 'Автоматизация учета рабочего времени сотрудников', 60, 'Описание задачи 1', 'Выполняется', 10, 100),
+(2, 1, 2, 3, 'Разработка мобильного приложения для онлайн-обучения', 10, 'Описание задачи 2', 'Новая', 40, 200),
+(3, 2, 3, 4, 'Создание платформы для управления проектами', 70, 'Описание задачи 3', 'Переоткрыта', 20, 150),
+(4, 2, 4, 5, 'Оптимизация процесса обработки заказов и доставки', 40, 'Описание задачи 4', 'Закрыта', 8, 180),
+(5, 3, 5, 6, 'Разработка системы мониторинга здоровья пациентов', 90, 'Описание задачи 5', 'Выполняется', 12, 220),
+(6, 3, 6, 7, 'Интеграция и анализ данных для принятия решений', 5, 'Описание задачи 6', 'Новая', 16, 130),
+(7, 4, 7, 1, 'Создание веб-сервиса для бронирования гостиничных номеров', 50, 'Описание задачи 7', 'Выполняется', 18, 190),
+(8, 4, 1, 3, 'Разработка игрового приложения для обучения детей математике', 30, 'Описание задачи 8', 'Закрыта', 6, 170),
+(9, 5, 3, 5, 'Оптимизация работы call-центра с помощью AI', 45, 'Описание задачи 9', 'Закрыта', 10, 250),
+(10, 5, 5, 7, 'Создание платформы для онлайн-консультаций специалистов', 55, 'Описание задачи 10', 'Переоткрыта', 12, 200);
+
+
+-- Добавление таблицы для хранения истории изменений
+CREATE TABLE Task3History (
+    HistoryID SERIAL PRIMARY KEY,
+    TaskID INT NOT NULL,
+    Heading VARCHAR(100) NOT NULL,
+    Priority INT,
+    Status VARCHAR(100),
+    Evaluation INT,
+    Action VARCHAR(20) NOT NULL, -- Вставка, обновление или удаление
+    Timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UserID INT NOT NULL, -- Идентификатор пользователя, совершившего действие
+    FOREIGN KEY (TaskID) REFERENCES Tasks3 (TaskID),
+    FOREIGN KEY (UserID) REFERENCES Users (UID)
+);
+
+
+-- Создание хранимых процедур для записи истории изменений
+CREATE OR REPLACE FUNCTION LogTaskChanges(
+    p_TaskID INT,
+    p_Heading VARCHAR(100),
+    p_Priority INT,
+    p_Status VARCHAR(100),
+    p_Evaluation INT,
+    p_Action VARCHAR(20),
+    p_UserID INT
+) 
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Получаем текущие значения полей задачи
+    DECLARE
+        v_CurrentHeading VARCHAR(100);
+        v_CurrentPriority INT;
+        v_CurrentStatus VARCHAR(100);
+        v_CurrentEvaluation INT;
+    BEGIN
+        SELECT Heading, Priority, Status, Evaluation
+        INTO v_CurrentHeading, v_CurrentPriority, v_CurrentStatus, v_CurrentEvaluation
+        FROM Tasks3
+        WHERE TaskID = p_TaskID;
+
+        -- Записываем старые значения полей в историю изменений
+        INSERT INTO Task3History (TaskID, Heading, Priority, Status, Evaluation, Action, UserID)
+        VALUES (p_TaskID, v_CurrentHeading, v_CurrentPriority, v_CurrentStatus, v_CurrentEvaluation, p_Action, p_UserID);
+    END;
+END;
+$$;
+
+
+
+-- Изменение хранимой процедуры для обновления задач
+CREATE OR REPLACE FUNCTION UpdateTask(
+    p_TaskID INT,
+    p_Heading VARCHAR(100),
+    p_Priority INT,
+    p_Status VARCHAR(100),
+    p_Evaluation INT,
+    p_UserID INT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+begin
+	
+   -- Запись истории изменений
+    PERFORM  LogTaskChanges(p_TaskID, p_Heading, p_Priority, p_Status, p_Evaluation, 'Update', p_UserID);
+    UPDATE Tasks3
+    SET Heading = p_Heading,
+        Priority = p_Priority,
+        Status = p_Status,
+        Evaluation = p_Evaluation
+    WHERE TaskID = p_TaskID;
+   
+
+END;
+$$;
+
+
+SELECT * FROM Tasks3;
+
+SELECT LogTaskChanges(1, 'Новое название задачи', 50, 'Выполняется', 20, 'Update', 1);
+
+SELECT * FROM Task3History;
+
+SELECT UpdateTask(1, 'НовоеНовое название задачи', 70, 'Закрыта', 30, 1);
+
+SELECT * FROM Task3History;
+
+
+ALTER TABLE Tasks3 ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+
+-- Создание хранимой процедуры для удаления задач
+CREATE OR REPLACE FUNCTION DeleteTask(
+    p_TaskID INT
+) 
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_UserID INT;
+    v_Heading VARCHAR(100);
+    v_Priority INT;
+    v_Status VARCHAR(100);
+    v_Evaluation INT;
+BEGIN
+    SELECT TaskCreator, Heading, Priority, Status, Evaluation INTO v_UserID, v_Heading, v_Priority, v_Status, v_Evaluation
+    FROM Tasks3
+    WHERE TaskID = p_TaskID;
+
+    INSERT INTO Task3History (TaskID, Heading, Priority, Status, Evaluation, Action, UserID)
+    VALUES (p_TaskID, v_Heading, v_Priority, v_Status, v_Evaluation, 'Delete', v_UserID);
+   
+    UPDATE Tasks3 SET is_deleted = TRUE WHERE TaskID = p_TaskID;
+END;
+$$;
+
+-- Вызываем функцию для удаления задачи с TaskID = 2
+SELECT DeleteTask(3);
+
+
+
+
+-- Откат изменений по задаче до предыдущей редакции
+CREATE OR REPLACE FUNCTION RollbackTaskChanges(
+    p_TaskID INT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_PrevHistoryID INT;
+    v_PrevHeading VARCHAR(100);
+    v_PrevPriority INT;
+    v_PrevStatus VARCHAR(100);
+    v_PrevEvaluation INT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM Tasks3 WHERE TaskID = p_TaskID AND is_deleted = TRUE) THEN
+        RAISE EXCEPTION 'Cannot rollback changes for a deleted task';
+    END IF;
+
+    -- Получаем ID предыдущей записи истории для задачи
+    SELECT MAX(HistoryID)
+    INTO v_PrevHistoryID
+    FROM Task3History
+    WHERE TaskID = p_TaskID AND Action = 'Update';
+
+    -- Получаем данные предыдущей редакции задачи
+    SELECT Heading, Priority, Status, Evaluation
+    INTO v_PrevHeading, v_PrevPriority, v_PrevStatus, v_PrevEvaluation
+    FROM Task3History
+    WHERE HistoryID = v_PrevHistoryID;
+   
+    UPDATE Tasks3
+    SET Heading = v_PrevHeading,
+        Priority = v_PrevPriority,
+        Status = v_PrevStatus,
+        Evaluation = v_PrevEvaluation
+    WHERE TaskID = p_TaskID;
+   
+   --удалить запись о последнем обновлении
+   DELETE FROM Task3History
+   WHERE HistoryID = v_PrevHistoryID;
+END;
+$$;
+
+SELECT RollbackTaskChanges(4);
+
+
+
+-- Хранимая функция для просмотра истории удаленных задач
+CREATE OR REPLACE FUNCTION ViewDeletedTasksHistory()
+RETURNS TABLE (
+    HistoryID INT,
+    TaskID INT,
+    Heading VARCHAR(100),
+    Priority INT,
+    Status VARCHAR(100),
+    Evaluation INT,
+    Action VARCHAR(20),
+    ChangeTimestamp TIMESTAMPTZ,
+    UserID INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT Task3History.HistoryID, Task3History.TaskID, Task3History.Heading, Task3History.Priority, 
+           Task3History.Status, Task3History.Evaluation, Task3History.Action, Task3History.Timestamp AS ChangeTimestamp, Task3History.UserID
+    FROM Task3History
+    WHERE Task3History.Action = 'Delete';
+END;
+$$;
+
+SELECT * FROM ViewDeletedTasksHistory();
+
+
+
+-- Хранимая функция для восстановления удаленной задачи
+CREATE OR REPLACE FUNCTION RestoreDeletedTask(
+    p_TaskID INT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Task3History WHERE TaskID = p_TaskID AND Action = 'Delete') THEN
+        RAISE EXCEPTION 'No deleted task found with TaskID %', p_TaskID;
+    END IF;
+
+    -- Восстанавливаем задачу
+    UPDATE Tasks3
+    SET is_deleted = FALSE
+    WHERE TaskID = p_TaskID;
+
+    DELETE FROM Task3History
+    WHERE TaskID = p_TaskID AND Action = 'Delete';
+END;
+$$;
+
+SELECT RestoreDeletedTask(3);
+
+SELECT * FROM Tasks3 WHERE TaskID = 3;
+
+
